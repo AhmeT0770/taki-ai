@@ -19,7 +19,7 @@ Bu isteği profesyonel bir ürün fotoğrafçısı gibi tek cümlede yeniden yaz
 Sadece yeniden yazılmış cümleyi döndür.`;
 
     const response = await aiClient.models.generateContent({
-        model: 'gemini-2.0-flash-exp',
+        model: 'gemini-1.5-flash',
         contents: [{ parts: [{ text: instruction }] }]
     });
 
@@ -94,7 +94,7 @@ export default async (req, context) => {
         }
 
         const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash-exp',
+            model: 'gemini-1.5-flash',
             contents: {
                 parts: [
                     { inlineData: { mimeType, data: cleanBase64 } },
