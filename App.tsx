@@ -438,10 +438,11 @@ const App: React.FC = () => {
             {concepts.length === 0 && (
               <div className="text-center mb-10 max-w-2xl mx-auto">
                 <h2 className="text-4xl md:text-5xl font-serif font-bold mb-6 text-luxury-900">
-                  Anlık çekimleri stüdyo karelerine dönüştürün.
+                  Mücevherleriniz, Profesyonel Stüdyo Kareleriyle Hayat Bulsun
                 </h2>
                 <p className="text-lg text-luxury-500 mb-8 leading-relaxed font-light">
-                  Takınızın basit bir fotoğrafını yükleyin. Yapay zekâmız onu kusursuz ışıkta profesyonel stüdyo sahnelerine taşır.
+                  Telefonunuzla çektiğiniz sıradan takı fotoğraflarını, yapay zeka gücüyle profesyonel stüdyo çekimlerine dönüştürün.
+                  Minimalist, lüks veya doğal - her tarzda üç benzersiz konsept, anında hazır. Pahalı ekipmana ve stüdyoya veda edin.
                 </p>
               </div>
             )}
