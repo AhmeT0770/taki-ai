@@ -138,6 +138,4 @@ Pull request'ler memnuniyetle karşılanır!
 
 Sorularınız için [issue](https://github.com/AhmeT0770/taki-ai/issues) açabilirsiniz.
 
----
-
-**Made with ❤️ using Google Gemini 2.0**
+-
