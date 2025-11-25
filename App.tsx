@@ -8,6 +8,7 @@ import { Button } from './components/Button';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { SaveImageModal } from './components/SaveImageModal';
 import { Gallery } from './components/Gallery';
+import { Feedback } from './components/Feedback';
 import { uploadImageToStorage, saveImageRecord } from './services/supabaseClient';
 
 
@@ -203,7 +204,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedResolution, setSelectedResolution] = useState<ResolutionOptionId>('8k');
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<AspectRatioOptionId>('square');
-  const [currentPage, setCurrentPage] = useState<'home' | 'gallery'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'gallery' | 'feedback'>('home');
 
   // Editor State
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -432,6 +433,11 @@ Gereksinimler: yüksek detay, makro lens, alan derinliği, ticari ışıklandır
     return <Gallery onBack={() => setCurrentPage('home')} />;
   }
 
+  // Show Feedback if on feedback page
+  if (currentPage === 'feedback') {
+    return <Feedback />;
+  }
+
   return (
     <div className="min-h-screen flex flex-col font-sans text-luxury-900 bg-[#f7f7f7]">
 
@@ -447,9 +453,15 @@ Gereksinimler: yüksek detay, makro lens, alan derinliği, ticari ışıklandır
           <div className="flex items-center gap-6">
             <button
               onClick={() => setCurrentPage('gallery')}
-              className="text-sm font-medium text-luxury-700 hover:text-luxury-900 transition-colors"
+              className="text-sm font-medium text-luxury-600 hover:text-luxury-900 transition-colors border-b-2 border-transparent hover:border-luxury-400 pb-1"
             >
               Galeri
+            </button>
+            <button
+              onClick={() => setCurrentPage('feedback')}
+              className="text-sm font-medium text-luxury-600 hover:text-luxury-900 transition-colors border-b-2 border-transparent hover:border-luxury-400 pb-1"
+            >
+              Geri Bildirim
             </button>
             <div className="text-xs font-medium text-luxury-500 uppercase tracking-widest hidden sm:block">
               Profesyonel Ürün Fotoğrafllığı

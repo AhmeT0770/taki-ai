@@ -95,3 +95,38 @@ export const deleteImage = async (id: string, imageUrl: string) => {
         throw error;
     }
 };
+
+// Feedback Functions
+export const getFeedbackMessages = async () => {
+    const { data, error } = await supabase
+        .from('feedback_messages')
+        .select('*')
+        .order('created_at', { ascending: true });
+
+    if (error) {
+        console.error('Mesajlar yüklenemedi:', error);
+        throw error;
+    }
+
+    return data;
+};
+
+export const addFeedbackMessage = async (message: string, isAdmin: boolean = false, replyTo?: string) => {
+    const { data, error } = await supabase
+        .from('feedback_messages')
+        .insert([
+            {
+                message,
+                is_admin: isAdmin,
+                reply_to: replyTo || null
+            }
+        ])
+        .select();
+
+    if (error) {
+        console.error('Mesaj gönderilemedi:', error);
+        throw error;
+    }
+
+    return data;
+};
