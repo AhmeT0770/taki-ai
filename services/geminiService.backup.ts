@@ -3,38 +3,13 @@ import { GoogleGenAI } from '@google/genai';
 const apiKey = import.meta.env.VITE_API_KEY;
 const imageModel = import.meta.env.VITE_IMAGE_MODEL ?? 'gemini-3-pro-image-preview';
 
-// Initialize AI client for local development only
-const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+if (!apiKey) {
+  console.warn('Gemini API key eksik. Lütfen .env.local dosyasını kontrol edin.');
+}
+
+const ai = new GoogleGenAI({ apiKey: apiKey || '' });
 
 export const planShoots = async (imageBase64: string) => {
-  // In production (Vercel), use the secure API route
-  if (import.meta.env.PROD) {
-    try {
-      const response = await fetch('/api/plan-shoots', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ imageBase64 }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to plan shoots');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('API Route Error:', error);
-      throw error;
-    }
-  }
-
-  // In local development, use direct API call
-  if (!ai) {
-    throw new Error('API Key missing for local development');
-  }
-
   const base64Match = imageBase64.match(/^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/);
   if (!base64Match) {
     throw new Error('Geçersiz görsel formatı');
@@ -99,39 +74,6 @@ export const generateOrEditImage = async (
     aspectRatio?: string;
   }
 ): Promise<string> => {
-  // In production (Vercel), use the secure API route
-  if (import.meta.env.PROD) {
-    try {
-      const response = await fetch('/api/generate-image', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          imageBase64,
-          prompt,
-          config
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to generate image');
-      }
-
-      const data = await response.json();
-      return data.image;
-    } catch (error) {
-      console.error('API Route Error:', error);
-      throw error;
-    }
-  }
-
-  // In local development, use direct API call
-  if (!ai) {
-    throw new Error('API Key missing for local development');
-  }
-
   const base64Match = imageBase64.match(/^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/);
   if (!base64Match) {
     throw new Error('Geçersiz görsel formatı');

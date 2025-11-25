@@ -97,6 +97,11 @@ const resizeBase64Image = (imageBase64: string, targetWidth: number): Promise<st
           return;
         }
 
+        if (img.width <= targetWidth) {
+          resolve(imageBase64);
+          return;
+        }
+
         if (Math.abs(img.width - targetWidth) < 10) {
           resolve(imageBase64);
           return;
@@ -144,6 +149,8 @@ const ensureAspectRatio = async (imageBase64: string, aspectRatioId: AspectRatio
         return;
       }
 
+      const desiredRatio = details.ratio;
+
       const img = new Image();
       img.onload = () => {
         if (!img.width || !img.height) {
@@ -151,17 +158,25 @@ const ensureAspectRatio = async (imageBase64: string, aspectRatioId: AspectRatio
           return;
         }
 
-        const targetWidth = img.width;
-        const targetHeight = Math.max(1, Math.round(targetWidth / details.ratio));
+        let cropWidth = img.width;
+        let cropHeight = Math.round(cropWidth / desiredRatio);
 
-        if (Math.abs(img.height - targetHeight) < 10) {
+        if (cropHeight > img.height) {
+          cropHeight = img.height;
+          cropWidth = Math.round(cropHeight * desiredRatio);
+        }
+
+        if (Math.abs(cropWidth - img.width) < 2 && Math.abs(cropHeight - img.height) < 2) {
           resolve(imageBase64);
           return;
         }
 
+        const sx = Math.max(0, Math.round((img.width - cropWidth) / 2));
+        const sy = Math.max(0, Math.round((img.height - cropHeight) / 2));
+
         const canvas = document.createElement('canvas');
-        canvas.width = targetWidth;
-        canvas.height = targetHeight;
+        canvas.width = cropWidth;
+        canvas.height = cropHeight;
         const ctx = canvas.getContext('2d');
 
         if (!ctx) {
@@ -169,12 +184,7 @@ const ensureAspectRatio = async (imageBase64: string, aspectRatioId: AspectRatio
           return;
         }
 
-        const scale = Math.max(targetWidth / img.width, targetHeight / img.height);
-        const scaledWidth = img.width * scale;
-        const scaledHeight = img.height * scale;
-        const dx = (targetWidth - scaledWidth) / 2;
-        const dy = (targetHeight - scaledHeight) / 2;
-        ctx.drawImage(img, dx, dy, scaledWidth, scaledHeight);
+        ctx.drawImage(img, sx, sy, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
         resolve(canvas.toDataURL('image/png'));
       };
       img.onerror = () => resolve(imageBase64);
@@ -281,18 +291,20 @@ const App: React.FC = () => {
       const resolutionDetails = getResolutionDetails(resolutionId);
       const aspectRatioDetails = getAspectRatioDetails(aspectRatioId);
       // Construct a prompt that acts as a photography brief
-      const prompt = `Referans görseldeki takı ürününe ait profesyonel ürün fotoğrafı.
+      const prompt = `Referans görseldeki tekil takı ürününe ait profesyonel ürün fotoğrafı.
       Stil: ${concept.style}.
       Ortam/Bağlam: ${concept.description}.
       Aksesuarlar ve Işık: ${concept.elements.join(', ')}.
       Hedef fotoğraf boyutu: ${resolutionDetails.promptText}.
       Kadraj: ${aspectRatioDetails.promptText}.
       Gereksinimler: yüksek detay, makro lens, alan derinliği, ticari ışıklandırma, fotogerçekçi görünüm.
-      Takı ürününü aynen koru, sadece bu yeni ortamda sergile.`;
+      Takı ürününü aynen koru (taş sayısı, zincir formu, boyutu ve rengi değişmesin). Takıyı çoğaltma, yeni takılar ekleme. Arka plan veya atmosferik efektler ürünün çevresinde nazikçe konumlandırılsın; motifler sadece ışık pırıltısı, yansıma, bokeh ya da desen olarak hissedilsin.`;
 
-      const generatedImage = await generateOrEditImage(baseImage, prompt);
-      const normalizedImage = await ensureImageResolution(generatedImage, resolutionId);
-      const finalImage = await ensureAspectRatio(normalizedImage, aspectRatioId);
+      const generatedImage = await generateOrEditImage(baseImage, prompt, {
+        resolution: resolutionId === '2k' ? '2K' : resolutionId === '4k' ? '4K' : '8K',
+        aspectRatio: aspectRatioId === 'square' ? '1:1' : '9:16'
+      });
+      const finalImage = generatedImage;
 
       setConcepts(prev => prev.map(c =>
         c.id === concept.id
@@ -340,19 +352,25 @@ const App: React.FC = () => {
       const resolutionDetails = getResolutionDetails(resolutionForEdit);
       const aspectRatioDetails = getAspectRatioDetails(aspectRatioForEdit);
 
-      const enhancementPayload = {
-        userPrompt: trimmedPrompt,
-        resolutionText: resolutionDetails.promptText,
-        aspectRatioText: aspectRatioDetails.promptText
-      };
+      const promptWithResolution = `Profesyonel bir mücevher stüdyo fotoğrafını düzenle.
+- Takı orijinal formunda kalsın, ürün ana odak olsun.
+- Taş sayısı, zincir yapısı, boyutu ve rengi korunmalı; takıyı çoğaltma veya yeni takı ekleme.
+- Kullanıcının isteğini sahne atmosferi, ışık, arka plan dokusu ya da yansıma/ gölge etkisi olarak uygula; takıya fiziksel aksesuar ekleme.
+- Organik/çiçek gibi motifler yalnızca yumuşak desen, bokeh veya ışık kırılması şeklinde hissedilsin.
+- Kullanıcının isteği: "${trimmedPrompt}".
+Hedef fotoğraf boyutu: ${resolutionDetails.promptText}.
+Kadraj: ${aspectRatioDetails.promptText}.
+Gereksinimler: yüksek detay, makro lens, alan derinliği, ticari ışıklandırma, fotogerçekçi görünüm.`;
 
       const newImage = await generateOrEditImage(
         concept.generatedImageBase64,
-        trimmedPrompt,
-        { enhancement: enhancementPayload }
+        promptWithResolution,
+        {
+          resolution: resolutionForEdit === '2k' ? '2K' : resolutionForEdit === '4k' ? '4K' : '8K',
+          aspectRatio: aspectRatioForEdit === 'square' ? '1:1' : '9:16'
+        }
       );
-      const normalizedImage = await ensureImageResolution(newImage, resolutionForEdit);
-      const finalImage = await ensureAspectRatio(normalizedImage, aspectRatioForEdit);
+      const finalImage = newImage;
       setConcepts(prev => prev.map(c =>
         c.id === conceptId
           ? { ...c, generatedImageBase64: finalImage }
@@ -373,7 +391,19 @@ const App: React.FC = () => {
     if (!conceptToSave || !conceptToSave.generatedImageBase64) return;
 
     try {
-      const fileName = `${Date.now()}-${name.replace(/\s+/g, '-').toLowerCase()}.png`;
+      // Türkçe karakterleri İngilizce karşılıklarına çevir ve güvenli dosya adı oluştur
+      const safeName = name
+        .toLowerCase()
+        .replace(/ğ/g, 'g')
+        .replace(/ü/g, 'u')
+        .replace(/ş/g, 's')
+        .replace(/ı/g, 'i')
+        .replace(/ö/g, 'o')
+        .replace(/ç/g, 'c')
+        .replace(/[^a-z0-9-]/g, '-')
+        .replace(/-+/g, '-');
+
+      const fileName = `${Date.now()}-${safeName}.png`;
       const publicUrl = await uploadImageToStorage(conceptToSave.generatedImageBase64, fileName);
 
       if (publicUrl) {

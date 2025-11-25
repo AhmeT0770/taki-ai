@@ -36,7 +36,7 @@ export const uploadImageToStorage = async (imageBase64: string, fileName: string
         return publicUrl;
     } catch (error) {
         console.error('Storage işlemi başarısız:', error);
-        return null;
+        throw error;
     }
 };
 

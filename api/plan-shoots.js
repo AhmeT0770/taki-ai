@@ -1,49 +1,41 @@
 import { GoogleGenAI } from '@google/genai';
 
-export default async (req, context) => {
-    // CORS headers
-    const headers = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Content-Type': 'application/json',
-    };
+export default async function handler(req, res) {
+    // CORS configuration
+    res.setHeader('Access-Control-Allow-Credentials', true);
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+    res.setHeader(
+        'Access-Control-Allow-Headers',
+        'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version'
+    );
 
-    // Handle OPTIONS request
     if (req.method === 'OPTIONS') {
-        return new Response(null, { status: 204, headers });
+        res.status(200).end();
+        return;
     }
 
-    // Only allow POST
     if (req.method !== 'POST') {
-        return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-            status: 405,
-            headers,
-        });
+        return res.status(405).json({ error: 'Method not allowed' });
     }
 
     try {
-        const { imageBase64 } = await req.json();
+        const { imageBase64 } = req.body;
 
         if (!imageBase64) {
-            return new Response(JSON.stringify({ error: 'imageBase64 required' }), {
-                status: 400,
-                headers,
-            });
+            return res.status(400).json({ error: 'Image data required' });
         }
 
-        const API_KEY = Netlify.env.get('API_KEY');
-
-        if (!API_KEY) {
-            throw new Error('API_KEY not configured');
+        const apiKey = process.env.API_KEY;
+        if (!apiKey) {
+            return res.status(500).json({ error: 'Server configuration error: API Key missing' });
         }
 
-        const ai = new GoogleGenAI({ apiKey: API_KEY });
+        const ai = new GoogleGenAI({ apiKey });
 
-        // Extract base64 data
         const base64Match = imageBase64.match(/^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/);
         if (!base64Match) {
-            throw new Error('Invalid image format');
+            return res.status(400).json({ error: 'Invalid image format' });
         }
 
         const mimeType = `image/${base64Match[1]}`;
@@ -64,7 +56,7 @@ Her konsept için:
 JSON formatında döndür.`;
 
         const response = await ai.models.generateContent({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.5-flash',
             contents: {
                 parts: [
                     { inlineData: { mimeType, data: cleanBase64 } },
@@ -95,23 +87,10 @@ JSON formatında döndür.`;
         });
 
         const result = JSON.parse(response.text);
-
-        return new Response(JSON.stringify(result), {
-            status: 200,
-            headers,
-        });
+        return res.status(200).json(result);
 
     } catch (error) {
         console.error('Plan shoots error:', error);
-        return new Response(JSON.stringify({
-            error: error.message || 'Failed to plan shoots'
-        }), {
-            status: 500,
-            headers,
-        });
+        return res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
-};
-
-export const config = {
-    path: '/api/plan-shoots'
-};
+}

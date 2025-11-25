@@ -26,7 +26,7 @@ export const SaveImageModal: React.FC<SaveImageModalProps> = ({ isOpen, onClose,
             onClose();
         } catch (error) {
             console.error('Kaydetme hatası:', error);
-            alert('Kaydetme sırasında bir hata oluştu. Lütfen tekrar deneyin.');
+            alert(`Kaydetme sırasında bir hata oluştu: ${error instanceof Error ? error.message : 'Bilinmeyen hata'}`);
         } finally {
             setIsSaving(false);
         }

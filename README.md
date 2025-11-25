@@ -52,6 +52,8 @@ Telefonla çektiğiniz sıradan takı fotoğraflarını, yapay zeka gücüyle **
    API_KEY=your-gemini-api-key
    VITE_SUPABASE_URL=your-supabase-url
    VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+   # Opsiyonel: farklı görsel modeli için override edebilirsiniz
+   # VITE_IMAGE_MODEL=gemini-3-pro-image-preview
    ```
 
 4. **Supabase setup**
