@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MessageCircle, Send, Lock, User, UserCog } from 'lucide-react';
+import { MessageCircle, Send, User, UserCog } from 'lucide-react';
 import { getFeedbackMessages, addFeedbackMessage } from '../services/supabaseClient';
 import { Button } from './Button';
 
@@ -11,31 +11,17 @@ interface FeedbackMessage {
     reply_to: string | null;
 }
 
-const PASSWORD = 'çitos';
-
 export const Feedback: React.FC = () => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [password, setPassword] = useState('');
     const [messages, setMessages] = useState<FeedbackMessage[]>([]);
     const [newMessage, setNewMessage] = useState('');
     const [replyingTo, setReplyingTo] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Check if already authenticated
+    // Load messages on mount
     useEffect(() => {
-        const auth = localStorage.getItem('feedback_auth');
-        if (auth === PASSWORD) {
-            setIsAuthenticated(true);
-        }
+        loadMessages();
     }, []);
-
-    // Load messages
-    useEffect(() => {
-        if (isAuthenticated) {
-            loadMessages();
-        }
-    }, [isAuthenticated]);
 
     const loadMessages = async () => {
         try {
@@ -43,18 +29,6 @@ export const Feedback: React.FC = () => {
             setMessages(data || []);
         } catch (err) {
             console.error('Mesajlar yüklenemedi:', err);
-        }
-    };
-
-    const handleLogin = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (password === PASSWORD) {
-            localStorage.setItem('feedback_auth', PASSWORD);
-            setIsAuthenticated(true);
-            setPassword('');
-        } else {
-            setError('Yanlış şifre!');
-            setTimeout(() => setError(null), 3000);
         }
     };
 
@@ -79,46 +53,6 @@ export const Feedback: React.FC = () => {
         }
     };
 
-    if (!isAuthenticated) {
-        return (
-            <div className="min-h-screen bg-luxury-50 flex items-center justify-center p-4">
-                <div className="bg-white rounded-sm shadow-lg p-8 w-full max-w-md">
-                    <div className="flex items-center justify-center mb-6">
-                        <Lock className="text-luxury-500" size={48} />
-                    </div>
-                    <h2 className="text-2xl font-serif font-bold text-luxury-900 text-center mb-6">
-                        Geri Bildirim Sayfası
-                    </h2>
-                    <form onSubmit={handleLogin}>
-                        <div className="mb-4">
-                            <label htmlFor="password" className="block text-sm font-medium text-luxury-700 mb-2">
-                                Şifre
-                            </label>
-                            <input
-                                type="password"
-                                id="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 border border-luxury-200 rounded-sm focus:outline-none focus:ring-2 focus:ring-luxury-500"
-                                placeholder="Şifreyi girin"
-                                autoFocus
-                            />
-                            <p className="mt-2 text-xs text-luxury-400 italic">abla kedinin ismini girmen yeterli</p>
-                        </div>
-                        {error && (
-                            <div className="mb-4 p-3 bg-red-50 text-red-800 border border-red-200 rounded-sm text-sm">
-                                {error}
-                            </div>
-                        )}
-                        <Button type="submit" className="w-full">
-                            Giriş Yap
-                        </Button>
-                    </form>
-                </div>
-            </div>
-        );
-    }
-
     return (
         <div className="min-h-screen bg-luxury-50 p-4">
             <div className="max-w-4xl mx-auto">
@@ -128,15 +62,6 @@ export const Feedback: React.FC = () => {
                             <MessageCircle size={28} />
                             Geri Bildirimler
                         </h2>
-                        <button
-                            onClick={() => {
-                                localStorage.removeItem('feedback_auth');
-                                setIsAuthenticated(false);
-                            }}
-                            className="text-sm text-luxury-500 hover:text-luxury-700"
-                        >
-                            Çıkış
-                        </button>
                     </div>
 
                     {/* Messages List */}

@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Camera, Sparkles, AlertCircle, Aperture } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Camera, Sparkles, AlertCircle, Aperture, LogIn, LogOut, User } from 'lucide-react';
 import { PhotoConcept, PhotoStyle, GenerationStatus } from './types';
 import { planShoots, generateOrEditImage } from './services/geminiService';
 import { PhotoCard } from './components/OutfitCard'; // Using the component we updated
@@ -9,7 +9,9 @@ import { LoadingSpinner } from './components/LoadingSpinner';
 import { SaveImageModal } from './components/SaveImageModal';
 import { Gallery } from './components/Gallery';
 import { Feedback } from './components/Feedback';
-import { uploadImageToStorage, saveImageRecord } from './services/supabaseClient';
+import { AuthModal } from './components/AuthModal';
+import { uploadImageToStorage, saveImageRecord, getSession, signOut, onAuthStateChange } from './services/supabaseClient';
+import { canGenerateImage, markFreeTrialUsed, hasUsedFreeTrial } from './services/usageService';
 
 
 type ResolutionOptionId = '2k' | '4k' | '8k';
@@ -206,6 +208,12 @@ const App: React.FC = () => {
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<AspectRatioOptionId>('square');
   const [currentPage, setCurrentPage] = useState<'home' | 'gallery' | 'feedback'>('home');
 
+  // Auth State
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [pendingGeneration, setPendingGeneration] = useState(false);
+
   // Editor State
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
@@ -217,6 +225,50 @@ const App: React.FC = () => {
 
   // References
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check auth status on mount and listen for changes
+  useEffect(() => {
+    // Check initial session
+    const checkSession = async () => {
+      const session = await getSession();
+      if (session?.user) {
+        setIsAuthenticated(true);
+        setCurrentUser(session.user);
+      }
+    };
+    checkSession();
+
+    // Listen for auth changes
+    const { data: { subscription } } = onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setIsAuthenticated(true);
+        setCurrentUser(session.user);
+        // If there was a pending generation, start it now
+        if (pendingGeneration) {
+          setPendingGeneration(false);
+          startGenerationInternal();
+        }
+      } else {
+        setIsAuthenticated(false);
+        setCurrentUser(null);
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, [pendingGeneration]);
+
+  // Handle sign out
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+    } catch (error) {
+      console.error('Çıkış yapılamadı:', error);
+    }
+  };
 
   // Handlers
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -245,7 +297,24 @@ const App: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  // Check if user can generate and handle auth flow
   const startGeneration = async () => {
+    if (!sourceImage) return;
+
+    // Check if user can generate
+    if (!canGenerateImage(isAuthenticated)) {
+      // User has used their free trial and is not logged in
+      setIsAuthModalOpen(true);
+      setPendingGeneration(true);
+      return;
+    }
+
+    // Start the actual generation
+    startGenerationInternal();
+  };
+
+  // Internal generation function
+  const startGenerationInternal = async () => {
     if (!sourceImage) return;
 
     setStatus('analyzing');
@@ -267,6 +336,11 @@ const App: React.FC = () => {
 
       setConcepts(initialConcepts);
       setStatus('generating');
+
+      // Mark free trial as used (only if not authenticated)
+      if (!isAuthenticated) {
+        markFreeTrialUsed();
+      }
 
       // 2. Generate images for each concept in parallel
       const generationResolution = selectedResolution;
@@ -453,19 +527,43 @@ Gereksinimler: yüksek detay, makro lens, alan derinliği, ticari ışıklandır
           <div className="flex items-center gap-6">
             <button
               onClick={() => setCurrentPage('gallery')}
-              className="text-sm font-medium text-luxury-600 hover:text-luxury-900 transition-colors border-b-2 border-transparent hover:border-luxury-400 pb-1"
+              className="text-sm font-medium text-luxury-600 hover:text-luxury-900 transition-colors leading-none"
             >
               Galeri
             </button>
             <button
               onClick={() => setCurrentPage('feedback')}
-              className="text-sm font-medium text-luxury-600 hover:text-luxury-900 transition-colors border-b-2 border-transparent hover:border-luxury-400 pb-1"
+              className="text-sm font-medium text-luxury-600 hover:text-luxury-900 transition-colors leading-none"
             >
               Geri Bildirim
             </button>
-            <div className="text-xs font-medium text-luxury-500 uppercase tracking-widest hidden sm:block">
-              Profesyonel Ürün Fotoğrafllığı
-            </div>
+
+            {/* Auth Section */}
+            {isAuthenticated ? (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 text-sm text-luxury-600">
+                  <User size={16} />
+                  <span className="hidden sm:inline">
+                    {currentUser?.user_metadata?.full_name || currentUser?.email?.split('@')[0] || 'Kullanıcı'}
+                  </span>
+                </div>
+                <button
+                  onClick={handleSignOut}
+                  className="flex items-center gap-1.5 text-sm font-medium text-luxury-500 hover:text-luxury-900 transition-colors"
+                >
+                  <LogOut size={16} />
+                  <span className="hidden sm:inline">Çıkış</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-luxury-900 text-white text-sm font-medium rounded-sm hover:bg-luxury-800 transition-colors leading-none"
+              >
+                <LogIn size={16} />
+                <span>Giriş Yap</span>
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -693,7 +791,17 @@ Gereksinimler: yüksek detay, makro lens, alan derinliği, ticari ışıklandır
         imageUrl={conceptToSave?.generatedImageBase64}
       />
 
-
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => {
+          setIsAuthModalOpen(false);
+          setPendingGeneration(false);
+        }}
+        onSuccess={() => {
+          // Auth state change listener will handle the rest
+        }}
+      />
 
     </div>
   );

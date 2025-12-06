@@ -130,3 +130,114 @@ export const addFeedbackMessage = async (message: string, isAdmin: boolean = fal
 
     return data;
 };
+
+// ============================================
+// Auth Functions
+// ============================================
+
+/**
+ * Email ve şifre ile giriş yapar
+ */
+export const signInWithEmail = async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+    });
+
+    if (error) {
+        console.error('Giriş hatası:', error);
+        throw error;
+    }
+
+    return data;
+};
+
+/**
+ * Email ve şifre ile yeni hesap oluşturur
+ */
+export const signUpWithEmail = async (email: string, password: string, name?: string) => {
+    const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+            data: {
+                full_name: name || ''
+            }
+        }
+    });
+
+    if (error) {
+        console.error('Kayıt hatası:', error);
+        throw error;
+    }
+
+    return data;
+};
+
+/**
+ * Google OAuth ile giriş yapar
+ */
+export const signInWithGoogle = async () => {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined
+        }
+    });
+
+    if (error) {
+        console.error('Google giriş hatası:', error);
+        throw error;
+    }
+
+    return data;
+};
+
+/**
+ * Oturumu kapatır
+ */
+export const signOut = async () => {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+        console.error('Çıkış hatası:', error);
+        throw error;
+    }
+};
+
+/**
+ * Mevcut kullanıcıyı getirir
+ */
+export const getCurrentUser = async () => {
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error) {
+        console.error('Kullanıcı bilgisi alınamadı:', error);
+        return null;
+    }
+
+    return user;
+};
+
+/**
+ * Mevcut oturumu getirir (daha hızlı, cache kullanır)
+ */
+export const getSession = async () => {
+    const { data: { session }, error } = await supabase.auth.getSession();
+
+    if (error) {
+        console.error('Oturum bilgisi alınamadı:', error);
+        return null;
+    }
+
+    return session;
+};
+
+/**
+ * Auth durumu değişikliklerini dinler
+ */
+export const onAuthStateChange = (callback: (event: string, session: any) => void) => {
+    return supabase.auth.onAuthStateChange((event, session) => {
+        callback(event, session);
+    });
+};
