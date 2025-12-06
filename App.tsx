@@ -304,6 +304,7 @@ const App: React.FC = () => {
     // Check if user can generate
     if (!canGenerateImage(isAuthenticated)) {
       // User has used their free trial and is not logged in
+      setError("🎁 Ücretsiz deneme hakkınız bitti! Devam etmek için lütfen giriş yapın.");
       setIsAuthModalOpen(true);
       setPendingGeneration(true);
       return;
