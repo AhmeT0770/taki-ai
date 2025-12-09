@@ -14,7 +14,7 @@ import { uploadImageToStorage, saveImageRecord, getSession, signOut, onAuthState
 import { canGenerateImage, markFreeTrialUsed, hasUsedFreeTrial } from './services/usageService';
 
 
-type ResolutionOptionId = '2k' | '4k' | '8k';
+type ResolutionOptionId = '1k' | '2k' | '4k';
 
 interface ResolutionOption {
   id: ResolutionOptionId;
@@ -26,25 +26,25 @@ interface ResolutionOption {
 
 const RESOLUTION_OPTIONS: ResolutionOption[] = [
   {
+    id: '1k',
+    label: '1K',
+    description: 'Yaklaşık 1024 px genişlik • hızlı sonuç',
+    promptText: 'yaklaşık 1024 piksel genişlikte (1K)',
+    width: 1024
+  },
+  {
     id: '2k',
     label: '2K',
-    description: 'Yaklaşık 2048 px genişlik • hızlı önizleme',
+    description: 'Yaklaşık 2048 px genişlik • dengeli kalite',
     promptText: 'yaklaşık 2048 piksel genişlikte (2K)',
     width: 2048
   },
   {
     id: '4k',
     label: '4K',
-    description: 'Yaklaşık 4096 px genişlik • dengeli kalite',
+    description: 'Yaklaşık 4096 px genişlik • en yüksek detay',
     promptText: 'yaklaşık 4096 piksel genişlikte (4K)',
     width: 4096
-  },
-  {
-    id: '8k',
-    label: '8K',
-    description: 'Yaklaşık 8192 px genişlik • en yüksek detay',
-    promptText: 'yaklaşık 8192 piksel genişlikte (8K)',
-    width: 8192
   }
 ];
 
@@ -86,58 +86,9 @@ const getAspectRatioDetails = (aspectRatioId: AspectRatioOptionId): AspectRatioO
   return ASPECT_RATIO_OPTIONS.find(option => option.id === aspectRatioId) ?? ASPECT_RATIO_OPTIONS[0];
 };
 
-const resizeBase64Image = (imageBase64: string, targetWidth: number): Promise<string> => {
-  if (typeof window === 'undefined') {
-    return Promise.resolve(imageBase64);
-  }
 
-  return new Promise((resolve) => {
-    try {
-      const img = new Image();
-      img.onload = () => {
-        if (!img.width || !img.height || !Number.isFinite(targetWidth) || targetWidth <= 0) {
-          resolve(imageBase64);
-          return;
-        }
 
-        if (img.width <= targetWidth) {
-          resolve(imageBase64);
-          return;
-        }
 
-        if (Math.abs(img.width - targetWidth) < 10) {
-          resolve(imageBase64);
-          return;
-        }
-
-        const scale = targetWidth / img.width;
-        const targetHeight = Math.max(1, Math.round(img.height * scale));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(targetWidth);
-        canvas.height = targetHeight;
-        const ctx = canvas.getContext('2d');
-
-        if (!ctx) {
-          resolve(imageBase64);
-          return;
-        }
-
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/png'));
-      };
-      img.onerror = () => resolve(imageBase64);
-      img.src = imageBase64;
-    } catch {
-      resolve(imageBase64);
-    }
-  });
-};
-
-const ensureImageResolution = async (imageBase64: string, resolutionId: ResolutionOptionId): Promise<string> => {
-  const details = getResolutionDetails(resolutionId);
-  if (!details.width) return imageBase64;
-  return resizeBase64Image(imageBase64, details.width);
-};
 
 const ensureAspectRatio = async (imageBase64: string, aspectRatioId: AspectRatioOptionId): Promise<string> => {
   if (typeof window === 'undefined') {
@@ -204,7 +155,7 @@ const App: React.FC = () => {
   const [concepts, setConcepts] = useState<PhotoConcept[]>([]);
   const [status, setStatus] = useState<GenerationStatus>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [selectedResolution, setSelectedResolution] = useState<ResolutionOptionId>('8k');
+  const [selectedResolution, setSelectedResolution] = useState<ResolutionOptionId>('4k');
   const [selectedAspectRatio, setSelectedAspectRatio] = useState<AspectRatioOptionId>('square');
   const [currentPage, setCurrentPage] = useState<'home' | 'gallery' | 'feedback'>('home');
 
@@ -377,7 +328,7 @@ const App: React.FC = () => {
       Takı ürününü aynen koru (taş sayısı, zincir formu, boyutu ve rengi değişmesin). Takıyı çoğaltma, yeni takılar ekleme. Arka plan veya atmosferik efektler ürünün çevresinde nazikçe konumlandırılsın; motifler sadece ışık pırıltısı, yansıma, bokeh ya da desen olarak hissedilsin.`;
 
       const generatedImage = await generateOrEditImage(baseImage, prompt, {
-        resolution: resolutionId === '2k' ? '2K' : resolutionId === '4k' ? '4K' : '8K',
+        resolution: resolutionId === '1k' ? '1K' : resolutionId === '2k' ? '2K' : '4K',
         aspectRatio: aspectRatioId === 'square' ? '1:1' : '9:16'
       });
       const finalImage = generatedImage;
@@ -442,7 +393,7 @@ Gereksinimler: yüksek detay, makro lens, alan derinliği, ticari ışıklandır
         concept.generatedImageBase64,
         promptWithResolution,
         {
-          resolution: resolutionForEdit === '2k' ? '2K' : resolutionForEdit === '4k' ? '4K' : '8K',
+          resolution: resolutionForEdit === '1k' ? '1K' : resolutionForEdit === '2k' ? '2K' : '4K',
           aspectRatio: aspectRatioForEdit === 'square' ? '1:1' : '9:16'
         }
       );
