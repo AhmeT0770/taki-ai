@@ -774,7 +774,7 @@ Gereksinimler: yüksek detay, makro lens, alan derinliği, ticari ışıklandır
 
       {/* Footer */}
       <footer className="bg-white border-t border-luxury-200 py-8 text-center text-xs text-luxury-400 uppercase tracking-widest">
-        <p>Prototip &bull; Web Fotoğraf</p>
+        <p>Takı AI Stüdyosu &bull; Web Fotoğraf</p>
       </footer>
 
       {/* Editor Modal */}
